@@ -10,7 +10,7 @@ app.use(cors());
 
 // API details
 const apiUrl = "https://roobetconnect.com/affiliate/v2/stats";
-const apiKey = "YOUR_API_KEY_HERE"; // Replace with your actual API key
+const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI2YWU0ODdiLTU3MDYtNGE3ZS04YTY5LTMzYThhOWM5NjMxYiIsIm5vbmNlIjoiZWI2MzYyMWUtMTMwZi00ZTE0LTlmOWMtOTY3MGNiZGFmN2RiIiwic2VydmljZSI6ImFmZmlsaWF0ZVN0YXRzIiwiaWF0IjoxNzI3MjQ2NjY1fQ.rVG_QKMcycBEnzIFiAQuixfu6K_oEkAq2Y8Gukco3b8"; // Replace with your actual API key
 
 let leaderboardCache = [];
 
@@ -29,7 +29,7 @@ async function fetchLeaderboardData() {
                 Authorization: `Bearer ${apiKey}`,
             },
             params: {
-                userId: "YOUR_USER_ID_HERE", // Replace with your actual user ID
+                userId: "26ae487b-5706-4a7e-8a69-33a8a9c9631b", // Replace with your actual user ID
                 startDate: "2025-03-30T20:30:00",
                 endDate: "2025-04-30T20:30:00",
             },
@@ -78,7 +78,7 @@ app.listen(PORT, '0.0.0.0', () => {
 
 // Self-ping every 4 minutes
 setInterval(() => {
-    axios.get("https://your-app-name.onrender.com") // Replace this with your actual deployed URL after uploading
+    axios.get("https://azisailbdata.onrender.com/leaderboard/top14") // Replace this with your actual deployed URL after uploading
         .then(() => console.log("Self-ping successful."))
         .catch((err) => console.error("Self-ping failed:", err.message));
 }, 4 * 60 * 1000);
