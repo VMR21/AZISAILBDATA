@@ -30,8 +30,8 @@ async function fetchLeaderboardData() {
             },
             params: {
                 userId: "26ae487b-5706-4a7e-8a69-33a8a9c9631b", // Replace with your actual user ID
-                startDate: "2025-04-30T20:30:00",
-                endDate: "2025-05-31T20:30:00",
+                startDate: "2025-04-30T15:00:00Z",
+                endDate: "2025-05-31T15:00:00",
             },
         });
 
