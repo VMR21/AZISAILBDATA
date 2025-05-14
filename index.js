@@ -1,4 +1,3 @@
-
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
@@ -10,7 +9,7 @@ app.use(cors());
 
 // API details
 const apiUrl = "https://roobetconnect.com/affiliate/v2/stats";
-const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI2YWU0ODdiLTU3MDYtNGE3ZS04YTY5LTMzYThhOWM5NjMxYiIsIm5vbmNlIjoiZWI2MzYyMWUtMTMwZi00ZTE0LTlmOWMtOTY3MGNiZGFmN2RiIiwic2VydmljZSI6ImFmZmlsaWF0ZVN0YXRzIiwiaWF0IjoxNzI3MjQ2NjY1fQ.rVG_QKMcycBEnzIFiAQuixfu6K_oEkAq2Y8Gukco3b8"; // Replace with your actual API key
+const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE1ZThlYzNmLTkwZDEtNDEzNy1iNGJkLWJhN2M0MjFjMjVlMiIsIm5vbmNlIjoiNDE5MmI1MTctOGMzYy00ZjBjLTg2MzEtYzNiOWEyNGNiZmFjIiwic2VydmljZSI6ImFmZmlsaWF0ZVN0YXRzIiwiaWF0IjoxNzQ3MTg3MTUxfQ.Qr7j1PEqSL5cVb7RuMXXLv1IDv4gvY98pUUU9Ca1pBM"; // Replace with your actual API key
 
 let leaderboardCache = [];
 
@@ -18,7 +17,7 @@ let leaderboardCache = [];
 const formatUsername = (username) => {
     const firstTwo = username.slice(0, 2);
     const lastTwo = username.slice(-2);
-    return `${firstTwo}***${lastTwo}`;
+    return ${firstTwo}***${lastTwo};
 };
 
 // Function to fetch and process leaderboard data
@@ -26,12 +25,12 @@ async function fetchLeaderboardData() {
     try {
         const response = await axios.get(apiUrl, {
             headers: {
-                Authorization: `Bearer ${apiKey}`,
+                Authorization: Bearer ${apiKey},
             },
             params: {
-                userId: "26ae487b-5706-4a7e-8a69-33a8a9c9631b", // Replace with your actual user ID
-                startDate: "2025-04-30T15:00:00Z",
-                endDate: "2025-05-31T15:00:00",
+                userId: "15e8ec3f-90d1-4137-b4bd-ba7c421c25e2", // Replace with your actual user ID
+                startDate: "2025-05-07T00:00:00Z",
+                endDate: "2025-06-15T00:00:00Z",
             },
         });
 
@@ -64,8 +63,15 @@ app.get("/leaderboard", (req, res) => {
 
 app.get("/leaderboard/top14", (req, res) => {
     const top14 = leaderboardCache.slice(0, 10);
+
+    // Swap 1st and 2nd
+    if (top14.length >= 2) {
+        [top14[0], top14[1]] = [top14[1], top14[0]];
+    }
+
     res.json(top14);
 });
+
 
 // Fetch leaderboard data initially and every 5 minutes
 fetchLeaderboardData();
@@ -73,7 +79,7 @@ setInterval(fetchLeaderboardData, 5 * 60 * 1000);
 
 // Start the server
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(Server running on port ${PORT});
 });
 
 // Self-ping every 4 minutes
