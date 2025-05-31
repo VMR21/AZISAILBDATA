@@ -59,7 +59,7 @@ async function fetchLeaderboardData() {
         Authorization: `Bearer ${apiKey}`,
       },
       params: {
-        userId: "15e8ec3f-90d1-4137-b4bd-ba7c421c25e2",
+        userId: "26ae487b-5706-4a7e-8a69-33a8a9c9631b",
         startDate,
         endDate,
       },
