@@ -1,25 +1,28 @@
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Enable CORS for all origins
 app.use(cors());
 
+// Roobet API details
 const apiUrl = "https://roobetconnect.com/affiliate/v2/stats";
-const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI2YWU0ODdiLTU3MDYtNGE3ZS04YTY5LTMzYThhOWM5NjMxYiIsIm5vbmNlIjoiZWI2MzYyMWUtMTMwZi00ZTE0LTlmOWMtOTY3MGNiZGFmN2RiIiwic2VydmljZSI6ImFmZmlsaWF0ZVN0YXRzIiwiaWF0IjoxNzI3MjQ2NjY1fQ.rVG_QKMcycBEnzIFiAQuixfu6K_oEkAq2Y8Gukco3b8"; // your real key
+const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI2YWU0ODdiLTU3MDYtNGE3ZS04YTY5LTMzYThhOWM5NjMxYiIsIm5vbmNlIjoiZWI2MzYyMWUtMTMwZi00ZTE0LTlmOWMtOTY3MGNiZGFmN2RiIiwic2VydmljZSI6ImFmZmlsaWF0ZVN0YXRzIiwiaWF0IjoxNzI3MjQ2NjY1fQ.rVG_QKMcycBEnzIFiAQuixfu6K_oEkAq2Y8Gukco3b8"; // Replace with your real key
 
 let leaderboardCache = [];
 
-// Format usernames
+// Format usernames like ab***yz
 const formatUsername = (username) => {
   const firstTwo = username.slice(0, 2);
   const lastTwo = username.slice(-2);
   return `${firstTwo}***${lastTwo}`;
 };
 
-// Get monthly date range in UTC (start of month to last day at 15:00 UTC = 00:00 JST next day)
-// Smart monthly range: if past this month's end, shift to next month
+// Get correct raffle period range (from 00:00 JST on 1st to 00:00 JST next month)
+// Adjusted based on UTC (JST is +9 hours → UTC 15:00 = JST 00:00)
 function getMonthlyDateRange() {
   const now = new Date();
   const currentUTC = now.getTime();
@@ -27,19 +30,19 @@ function getMonthlyDateRange() {
   const year = now.getUTCFullYear();
   const month = now.getUTCMonth();
 
-  // End of this month at 15:00 UTC (00:00 JST on next month)
-  const thisMonthEnd = Date.UTC(year, month + 1, 0, 15, 0, 0);
+  // Target: next month's 0th day at 15:01 UTC == 00:01 JST
+  const nextMonthStartCutoff = Date.UTC(year, month + 1, 0, 15, 1, 0);
 
   let startDate, endDate;
 
-  if (currentUTC < thisMonthEnd) {
-    // We’re still inside this month’s window
-    startDate = new Date(Date.UTC(year, month, 1, 15, 0, 0));  // 00:00 JST on 1st
-    endDate = new Date(thisMonthEnd);                          // 15:00 UTC on last day
+  if (currentUTC < nextMonthStartCutoff) {
+    // Still within this month’s raffle
+    startDate = new Date(Date.UTC(year, month, 1, 15, 0, 0));        // 00:00 JST on 1st
+    endDate   = new Date(Date.UTC(year, month + 1, 0, 15, 0, 0));    // 00:00 JST on next month start
   } else {
-    // We've passed this month’s period → shift to next month
-    startDate = new Date(Date.UTC(year, month + 1, 1, 15, 0, 0));  // 00:00 JST on 1st of next month
-    endDate = new Date(Date.UTC(year, month + 2, 0, 15, 0, 0));    // 15:00 UTC on last day of next month
+    // After next month rollover → switch to next month
+    startDate = new Date(Date.UTC(year, month + 1, 1, 15, 0, 0));
+    endDate   = new Date(Date.UTC(year, month + 2, 0, 15, 0, 0));
   }
 
   return {
@@ -48,8 +51,7 @@ function getMonthlyDateRange() {
   };
 }
 
-
-// Fetch leaderboard data
+// Fetch and cache leaderboard
 async function fetchLeaderboardData() {
   try {
     const { startDate, endDate } = getMonthlyDateRange();
@@ -77,7 +79,9 @@ async function fetchLeaderboardData() {
         weightedWager: Math.round(player.weightedWagered),
       }));
 
-    console.log("Leaderboard updated:", leaderboardCache.length, "entries");
+    console.log(
+      `[${new Date().toISOString()}] Leaderboard updated: ${leaderboardCache.length} entries`
+    );
   } catch (error) {
     console.error("Error fetching leaderboard data:", error.message);
   }
@@ -85,7 +89,7 @@ async function fetchLeaderboardData() {
 
 // Routes
 app.get("/", (req, res) => {
-  res.send("Welcome to the Leaderboard API. Access /leaderboard or /leaderboard/top14");
+  res.send("🎰 Roobet Leaderboard API Live! Use /leaderboard or /leaderboard/top14");
 });
 
 app.get("/leaderboard", (req, res) => {
@@ -93,22 +97,25 @@ app.get("/leaderboard", (req, res) => {
 });
 
 app.get("/leaderboard/top14", (req, res) => {
-  const top14 = leaderboardCache.slice(0, 10);
+  const top14 = leaderboardCache.slice(0, 14);
   res.json(top14);
 });
 
-// Initial fetch + update every 5 mins
-fetchLeaderboardData();
-setInterval(fetchLeaderboardData, 5 * 60 * 1000);
-
-// Server
+// Start server
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });
 
-// Self-ping every 4 minutes (keep Render alive)
+// First fetch immediately
+fetchLeaderboardData();
+
+// Update leaderboard every 5 minutes
+setInterval(fetchLeaderboardData, 5 * 60 * 1000);
+
+// Self-ping to keep Render alive every 4 minutes
 setInterval(() => {
-  axios.get("https://azisailbdata.onrender.com/leaderboard/top14")
-    .then(() => console.log("Self-ping successful."))
-    .catch((err) => console.error("Self-ping failed:", err.message));
+  axios
+    .get("https://azisailbdata.onrender.com/leaderboard/top14")
+    .then(() => console.log("🔁 Self-ping successful"))
+    .catch((err) => console.error("❌ Self-ping failed:", err.message));
 }, 4 * 60 * 1000);
