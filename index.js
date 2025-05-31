@@ -19,19 +19,35 @@ const formatUsername = (username) => {
 };
 
 // Get monthly date range in UTC (start of month to last day at 15:00 UTC = 00:00 JST next day)
+// Smart monthly range: if past this month's end, shift to next month
 function getMonthlyDateRange() {
   const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = now.getUTCMonth(); // 0-indexed
+  const currentUTC = now.getTime();
 
-  const startDate = new Date(Date.UTC(year, month, 1, 15, 0, 0)); // 00:00 JST on 1st
-  const endDate = new Date(Date.UTC(year, month + 1, 0, 15, 0, 0)); // 00:00 JST on last day
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+
+  // End of this month at 15:00 UTC (00:00 JST on next month)
+  const thisMonthEnd = Date.UTC(year, month + 1, 0, 15, 0, 0);
+
+  let startDate, endDate;
+
+  if (currentUTC < thisMonthEnd) {
+    // We’re still inside this month’s window
+    startDate = new Date(Date.UTC(year, month, 1, 15, 0, 0));  // 00:00 JST on 1st
+    endDate = new Date(thisMonthEnd);                          // 15:00 UTC on last day
+  } else {
+    // We've passed this month’s period → shift to next month
+    startDate = new Date(Date.UTC(year, month + 1, 1, 15, 0, 0));  // 00:00 JST on 1st of next month
+    endDate = new Date(Date.UTC(year, month + 2, 0, 15, 0, 0));    // 15:00 UTC on last day of next month
+  }
 
   return {
     startDate: startDate.toISOString(),
     endDate: endDate.toISOString(),
   };
 }
+
 
 // Fetch leaderboard data
 async function fetchLeaderboardData() {
