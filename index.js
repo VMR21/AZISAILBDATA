@@ -85,7 +85,7 @@ app.get("/leaderboard", (req, res) => {
 });
 
 app.get("/leaderboard/top14", (req, res) => {
-  res.json(leaderboardCache.slice(0, 14));
+  res.json(leaderboardCache.slice(0, 10));
 });
 
 app.get("/current-range", (req, res) => {
