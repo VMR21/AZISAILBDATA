@@ -8,10 +8,11 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 
 const apiUrl = "https://roobetconnect.com/affiliate/v2/stats";
-const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI2YWU0ODdiLTU3MDYtNGE3ZS04YTY5LTMzYThhOWM5NjMxYiIsIm5vbmNlIjoiZWI2MzYyMWUtMTMwZi00ZTE0LTlmOWMtOTY3MGNiZGFmN2RiIiwic2VydmljZSI6ImFmZmlsaWF0ZVN0YXRzIiwiaWF0IjoxNzI3MjQ2NjY1fQ.rVG_QKMcycBEnzIFiAQuixfu6K_oEkAq2Y8Gukco3b8"; // Replace this
-const userId = "26ae487b-5706-4a7e-8a69-33a8a9c9631b"; // Replace if different
+const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI2YWU0ODdiLTU3MDYtNGE3ZS04YTY5LTMzYThhOWM5NjMxYiIsIm5vbmNlIjoiZWI2MzYyMWUtMTMwZi00ZTE0LTlmOWMtOTY3MGNiZGFmN2RiIiwic2VydmljZSI6ImFmZmlsaWF0ZVN0YXRzIiwiaWF0IjoxNzI3MjQ2NjY1fQ.rVG_QKMcycBEnzIFiAQuixfu6K_oEkAq2Y8Gukco3b8";
+const userId = "26ae487b-5706-4a7e-8a69-33a8a9c9631b";
 
-let leaderboardCache = [];
+let leaderboardCache = [];         // Full version
+let leaderboardTop14Cache = [];    // Masked + swapped version
 
 const formatUsername = (username) => {
   const firstTwo = username.slice(0, 2);
@@ -52,30 +53,36 @@ async function fetchLeaderboardData() {
 
     const data = response.data;
 
-    leaderboardCache = data
+    const sorted = data
       .filter((player) => player.username !== "azisai205")
-      .sort((a, b) => b.weightedWagered - a.weightedWagered)
-      .slice(0, 100000)
+      .sort((a, b) => b.weightedWagered - a.weightedWagered);
+
+    leaderboardCache = sorted.map((player, index) => ({
+      rank: index + 1,
+      username: player.username,
+      weightedWager: Math.round(player.weightedWagered),
+    }));
+
+    leaderboardTop14Cache = sorted
       .map((player) => ({
         username: formatUsername(player.username),
-        wagered: Math.round(player.weightedWagered),
         weightedWager: Math.round(player.weightedWagered),
       }));
 
-    // 🔁 Swap 1st and 2nd
-    if (leaderboardCache.length >= 2) {
-      const temp = leaderboardCache[0];
-      leaderboardCache[0] = leaderboardCache[1];
-      leaderboardCache[1] = temp;
+    // Swap 1st and 2nd in masked version
+    if (leaderboardTop14Cache.length >= 2) {
+      const temp = leaderboardTop14Cache[0];
+      leaderboardTop14Cache[0] = leaderboardTop14Cache[1];
+      leaderboardTop14Cache[1] = temp;
     }
 
-    console.log(`[${new Date().toISOString()}] ✅ Leaderboard updated: ${leaderboardCache.length} entries`);
+    console.log(`[${new Date().toISOString()}] ✅ Leaderboard updated: ${sorted.length} entries`);
   } catch (error) {
     console.error("❌ Error fetching leaderboard data:", error.message);
   }
 }
 
-// API routes
+// Routes
 app.get("/", (req, res) => {
   res.send("🎰 Roobet Leaderboard API Live! Use /leaderboard or /leaderboard/top14");
 });
@@ -85,7 +92,7 @@ app.get("/leaderboard", (req, res) => {
 });
 
 app.get("/leaderboard/top14", (req, res) => {
-  res.json(leaderboardCache.slice(0, 10));
+  res.json(leaderboardTop14Cache.slice(0, 10));
 });
 
 app.get("/current-range", (req, res) => {
@@ -93,18 +100,16 @@ app.get("/current-range", (req, res) => {
   res.json({ startDate, endDate });
 });
 
-// Start server
+// Server start
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
 
-// First fetch
+// Start fetch
 fetchLeaderboardData();
-
-// Update leaderboard every 5 minutes
 setInterval(fetchLeaderboardData, 5 * 60 * 1000);
 
-// Self-ping every 4 mins (Render)
+// Self-ping every 4 mins (for Render)
 setInterval(() => {
   axios
     .get("https://azisailbdata.onrender.com/leaderboard/top14")
