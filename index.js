@@ -27,14 +27,23 @@ function getMonthlyDateRange() {
   const year = jstNow.getUTCFullYear();
   const month = jstNow.getUTCMonth();
 
-  const startDate = new Date(Date.UTC(year, month, 0, 15, 1, 0));   // Last day prev month 15:01 UTC
-  const endDate = new Date(Date.UTC(year, month + 1, 0, 15, 0, 0)); // Last day curr month 15:00 UTC
+  let startDate, endDate;
+
+  // Special handling for June 2025: cover both June and July
+  if (year === 2025 && month === 5) {
+    startDate = new Date(Date.UTC(2025, 4, 30, 15, 1, 0)); // May 30 15:01 UTC
+    endDate = new Date(Date.UTC(2025, 6, 31, 15, 0, 0));   // July 31 15:00 UTC
+  } else {
+    startDate = new Date(Date.UTC(year, month, 0, 15, 1, 0));   // Last day prev month 15:01 UTC
+    endDate = new Date(Date.UTC(year, month + 1, 0, 15, 0, 0)); // Last day curr month 15:00 UTC
+  }
 
   return {
     startDate: startDate.toISOString(),
     endDate: endDate.toISOString(),
   };
 }
+
 
 async function fetchLeaderboardData() {
   try {
