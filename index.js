@@ -23,19 +23,24 @@ const formatUsername = (username) => {
 // JST-aware monthly raffle logic
 function getMonthlyDateRange() {
   const now = new Date();
-  const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9
   const year = jstNow.getUTCFullYear();
   const month = jstNow.getUTCMonth();
 
   let startDate, endDate;
 
-  // Special handling for June 2025: cover both June and July
-  if (year === 2025 && month === 5) {
+  const inTwoMonthPeriod = (
+    jstNow >= new Date(Date.UTC(2025, 5, 0, 15, 1, 0)) && // May 31 15:01 UTC = June 1 JST
+    jstNow < new Date(Date.UTC(2025, 7, 0, 15, 0, 0))     // July 31 15:00 UTC = Aug 1 JST
+  );
+
+  if (inTwoMonthPeriod) {
     startDate = new Date(Date.UTC(2025, 4, 30, 15, 1, 0)); // May 30 15:01 UTC
     endDate = new Date(Date.UTC(2025, 6, 31, 15, 0, 0));   // July 31 15:00 UTC
   } else {
-    startDate = new Date(Date.UTC(year, month, 0, 15, 1, 0));   // Last day prev month 15:01 UTC
-    endDate = new Date(Date.UTC(year, month + 1, 0, 15, 0, 0)); // Last day curr month 15:00 UTC
+    // Normal monthly range
+    startDate = new Date(Date.UTC(year, month - 1, 30, 15, 1, 0)); // Last day prev month 15:01 UTC
+    endDate = new Date(Date.UTC(year, month, 31, 15, 0, 0));       // Last day this month 15:00 UTC
   }
 
   return {
@@ -43,6 +48,7 @@ function getMonthlyDateRange() {
     endDate: endDate.toISOString(),
   };
 }
+
 
 
 async function fetchLeaderboardData() {
