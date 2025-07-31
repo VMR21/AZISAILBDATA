@@ -84,10 +84,13 @@ async function fetchLeaderboardData() {
       weightedWager: Math.round(player.weightedWagered),
     }));
 
-    leaderboardTop14Cache = sorted.map((player) => ({
-      username: formatUsername(player.username),
-      weightedWager: Math.round(player.weightedWagered),
-    }));
+leaderboardTop14Cache = sorted
+  .filter(player => player.weightedWagered >= 100000)
+  .map((player) => ({
+    username: formatUsername(player.username),
+    weightedWager: Math.round(player.weightedWagered),
+  }));
+
 
     if (leaderboardTop14Cache.length >= 2) {
       const temp = leaderboardTop14Cache[0];
