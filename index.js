@@ -11,8 +11,8 @@ const apiUrl = "https://roobetconnect.com/affiliate/v2/stats";
 const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI2YWU0ODdiLTU3MDYtNGE3ZS04YTY5LTMzYThhOWM5NjMxYiIsIm5vbmNlIjoiZWI2MzYyMWUtMTMwZi00ZTE0LTlmOWMtOTY3MGNiZGFmN2RiIiwic2VydmljZSI6ImFmZmlsaWF0ZVN0YXRzIiwiaWF0IjoxNzI3MjQ2NjY1fQ.rVG_QKMcycBEnzIFiAQuixfu6K_oEkAq2Y8Gukco3b8";
 const userId = "26ae487b-5706-4a7e-8a69-33a8a9c9631b";
 
-let leaderboardCache = [];         // Full version
-let leaderboardTop14Cache = [];    // Masked + swapped version
+let leaderboardCache = [];
+let leaderboardTop14Cache = [];
 
 const formatUsername = (username) => {
   const firstTwo = username.slice(0, 2);
@@ -20,28 +20,36 @@ const formatUsername = (username) => {
   return `${firstTwo}***${lastTwo}`;
 };
 
-// JST-aware monthly raffle logic
-function getMonthlyDateRange() {
+function getLastDayOfMonth(year, month) {
+  return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+}
+
+function getSmartDateRange() {
   const now = new Date();
   const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9
-  const year = jstNow.getUTCFullYear();
-  const month = jstNow.getUTCMonth();
 
-  let startDate, endDate;
+  const jstYear = jstNow.getUTCFullYear();
+  const jstMonth = jstNow.getUTCMonth(); // 0 = Jan, 5 = June, 6 = July
 
-  const inTwoMonthPeriod = (
-    jstNow >= new Date(Date.UTC(2025, 5, 0, 15, 1, 0)) && // May 31 15:01 UTC = June 1 JST
-    jstNow < new Date(Date.UTC(2025, 7, 0, 15, 0, 0))     // July 31 15:00 UTC = Aug 1 JST
-  );
-
-  if (inTwoMonthPeriod) {
-    startDate = new Date(Date.UTC(2025, 4, 30, 15, 1, 0)); // May 30 15:01 UTC
-    endDate = new Date(Date.UTC(2025, 6, 31, 15, 0, 0));   // July 31 15:00 UTC
-  } else {
-    // Normal monthly range
-    startDate = new Date(Date.UTC(year, month - 1, 30, 15, 1, 0)); // Last day prev month 15:01 UTC
-    endDate = new Date(Date.UTC(year, month, 31, 15, 0, 0));       // Last day this month 15:00 UTC
+  // 🎯 Hardcoded for June + July 2025 (JST)
+  if (jstYear === 2025 && (jstMonth === 5 || jstMonth === 6)) {
+    return {
+      startDate: "2025-05-31T15:01:00.000Z", // ✅ June 1, 00:01 JST
+      endDate:   "2025-07-31T15:00:00.000Z"  // ✅ Aug 1, 00:00 JST
+    };
   }
+
+  // 🧠 Dynamic fallback for other months
+  const year = jstYear;
+  const month = jstMonth;
+
+  const getLastDay = (y, m) => new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+
+  const prevMonth = month - 1 < 0 ? 11 : month - 1;
+  const prevYear = month - 1 < 0 ? year - 1 : year;
+
+  const startDate = new Date(Date.UTC(prevYear, prevMonth, getLastDay(prevYear, prevMonth), 15, 1, 0));
+  const endDate = new Date(Date.UTC(year, month, getLastDay(year, month), 15, 0, 0));
 
   return {
     startDate: startDate.toISOString(),
@@ -49,11 +57,9 @@ function getMonthlyDateRange() {
   };
 }
 
-
-
 async function fetchLeaderboardData() {
   try {
-    const { startDate, endDate } = getMonthlyDateRange();
+    const { startDate, endDate } = getSmartDateRange();
 
     const response = await axios.get(apiUrl, {
       headers: {
@@ -78,13 +84,11 @@ async function fetchLeaderboardData() {
       weightedWager: Math.round(player.weightedWagered),
     }));
 
-    leaderboardTop14Cache = sorted
-      .map((player) => ({
-        username: formatUsername(player.username),
-        weightedWager: Math.round(player.weightedWagered),
-      }));
+    leaderboardTop14Cache = sorted.map((player) => ({
+      username: formatUsername(player.username),
+      weightedWager: Math.round(player.weightedWagered),
+    }));
 
-    // Swap 1st and 2nd in masked version
     if (leaderboardTop14Cache.length >= 2) {
       const temp = leaderboardTop14Cache[0];
       leaderboardTop14Cache[0] = leaderboardTop14Cache[1];
@@ -93,13 +97,15 @@ async function fetchLeaderboardData() {
 
     console.log(`[${new Date().toISOString()}] ✅ Leaderboard updated: ${sorted.length} entries`);
   } catch (error) {
+    leaderboardCache = [];
+    leaderboardTop14Cache = [];
     console.error("❌ Error fetching leaderboard data:", error.message);
   }
 }
 
 // Routes
 app.get("/", (req, res) => {
-  res.send("🎰 Roobet Leaderboard API Live! Use /leaderboard or /leaderboard/top14");
+  res.send("🎰 Roobet Leaderboard API Live – Auto Range with June+July special case");
 });
 
 app.get("/leaderboard", (req, res) => {
@@ -107,11 +113,11 @@ app.get("/leaderboard", (req, res) => {
 });
 
 app.get("/leaderboard/top14", (req, res) => {
-  res.json(leaderboardTop14Cache.slice(0, 5));
+  res.json(leaderboardTop14Cache.slice(0, 14));
 });
 
 app.get("/current-range", (req, res) => {
-  const { startDate, endDate } = getMonthlyDateRange();
+  const { startDate, endDate } = getSmartDateRange();
   res.json({ startDate, endDate });
 });
 
@@ -124,7 +130,7 @@ app.listen(PORT, "0.0.0.0", () => {
 fetchLeaderboardData();
 setInterval(fetchLeaderboardData, 5 * 60 * 1000);
 
-// Self-ping every 4 mins (for Render)
+// Self-ping
 setInterval(() => {
   axios
     .get("https://azisailbdata.onrender.com/leaderboard/top14")
