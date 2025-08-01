@@ -84,12 +84,21 @@ async function fetchLeaderboardData() {
       weightedWager: Math.round(player.weightedWagered),
     }));
 
-leaderboardTop14Cache = sorted
-  .filter(player => player.weightedWagered >= 100000)
-  .map((player) => ({
+leaderboardTop14Cache = [];
+
+const above100k = sorted.filter(player => player.weightedWagered >= 100000);
+
+if (above100k.length >= 10) {
+  leaderboardTop14Cache = above100k.map(player => ({
     username: formatUsername(player.username),
     weightedWager: Math.round(player.weightedWagered),
   }));
+} else {
+  leaderboardTop14Cache = sorted.slice(0, 10).map(player => ({
+    username: formatUsername(player.username),
+    weightedWager: Math.round(player.weightedWagered),
+  }));
+}
 
 
     if (leaderboardTop14Cache.length >= 2) {
